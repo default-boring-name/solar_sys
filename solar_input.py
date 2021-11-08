@@ -29,26 +29,19 @@ def read_space_objects_data_from_file(input_filename):
 
 
 
-def write_space_objects_data_to_file(output_filename, space_objects):
-    """Сохраняет данные о космических объектах в файл.
-
-    Строки должны иметь следующий формат:
-
-    Star <радиус в пикселах> <цвет> <масса> <x> <y> <Vx> <Vy>
-
-    Planet <радиус в пикселах> <цвет> <масса> <x> <y> <Vx> <Vy>
-
+def write_space_objects_data_to_file(output_filename, objects):
+    """Сохраняет данные о космических объектах в файл
     Параметры:
 
-    **output_filename** — имя входного файла
+    **output_filename** — имя выходного файла
 
-    **space_objects** — список объектов планет и звёзд
+    **objects** — список объектов планет и звёзд
     """
+    array = [vars(obj) for obj in objects]
+    data = {'objects': array}
     with open(output_filename, 'w') as out_file:
-        for obj in space_objects:
-            print(out_file, "%s %d %s %f" % ('1', 2, '3', 4.5))
-            # FIXME!
-
-
-#if __name__ == "__main__":
-    #print("This module is not for direct call!")
+        yaml.dump(data, out_file)
+        
+        
+if __name__ == "__main__":
+    print("This module is not for direct call!")
