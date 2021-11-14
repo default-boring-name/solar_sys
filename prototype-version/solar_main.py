@@ -7,6 +7,78 @@ WIN_SIZE = (1000, 900)
 pg.init()
 
 
+class ManageObj:
+    '''
+    Абстрактный класс, предоставляющий общий
+    функционал для объектов, за котором может
+    следить EventManager
+    '''
+
+    def __init__(self):
+        '''
+        Функция инициализирующая объект
+        '''
+        self.manager = None
+
+    def idle(self):
+        '''
+        Функция, описывающая дефолтное поведение объекта
+        '''
+        pass
+
+    def call(self, event):
+        '''
+        Функция, описывающая реакцию менеджера времени на полученное событие
+        :param event: полученное событие, на которое пуля
+                      должна прореагировать
+        '''
+        pass
+
+    def set_manager(self, event_manager):
+        '''
+        Функция, устанавливающая связь с обработчиком
+        событий
+        :param event_manager: объект EventManager, с которым
+                              нужно установить связь
+        '''
+
+        self.manager = event_manager
+        add_event = pg.event.Event(EventManager.ADDOBJ,
+                                   {"target": self})
+        pg.event.post(add_event)
+
+
+class TimeManager(ManageObj):
+    '''
+    Класс менеджера времени
+    '''
+
+    def __init__(self, fps):
+        '''
+        Функция инициализирующая менеджера времени
+        '''
+        self.fps = fps
+        self.total_time = 0
+        self.clock = pg.time.Clock()
+
+        super().__init__()
+
+    def idle(self):
+        '''
+        Функция, описывающая дефолтное поведение менеджера времени
+        (отсчет времени, проверка таймеров и т.д.)
+        '''
+        self.clock.tick(self.fps)
+        self.total_time += self.clock.get_time() / 1000
+
+    def get_time(self):
+        '''
+        Функция, возвращающая время в секундах,
+        прошедшее со старта программы
+        '''
+        return self.total_time
+
+
 class EventManager:
     '''
     Класс менеджра событий, который обрабатывает как
@@ -34,6 +106,9 @@ class EventManager:
         Функция для инициализация объекта менеджера событий
         '''
         self.pool = []
+        self.timer = TimeManager(FPS)
+
+        self.timer.set_manager(self)
 
     def add_obj(self, obj):
         '''
@@ -99,9 +174,19 @@ class EventManager:
 
         return running
 
+    def get_time(self):
+        '''
+        Функция, возвращающая время в секундах,
+        прошедшее со старта программы
+        '''
+        return self.timer.get_time()
+
 
 def main():
-    pass
+    manager = EventManager()
+
+    while manager.run():
+        pass
 
 
 if __name__ == "__main__":
