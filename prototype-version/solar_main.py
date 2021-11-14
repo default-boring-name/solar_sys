@@ -1,5 +1,6 @@
 import pygame as pg
 import thorpy
+import solar_vis as vis
 
 FPS = 30
 WIN_SIZE = {"w": 1000, "h": 900}
@@ -18,7 +19,7 @@ class ManageObj:
         '''
         Функция инициализирующая объект
         '''
-        self.manager = None
+        self.event_manager = None
 
     def idle(self):
         '''
@@ -28,9 +29,9 @@ class ManageObj:
 
     def call(self, event):
         '''
-        Функция, описывающая реакцию менеджера времени на полученное событие
-        :param event: полученное событие, на которое пуля
-                      должна прореагировать
+        Функция, описывающая реакцию объекта на полученное событие
+        :param event: полученное событие, на которое объект
+                      должен прореагировать
         '''
         pass
 
@@ -42,7 +43,7 @@ class ManageObj:
                               нужно установить связь
         '''
 
-        self.manager = event_manager
+        self.event_manager = event_manager
         add_event = pg.event.Event(EventManager.ADDOBJ,
                                    {"target": self})
         pg.event.post(add_event)
@@ -182,10 +183,66 @@ class EventManager:
         return self.timer.get_time()
 
 
-def main():
-    manager = EventManager()
+class VisualManager(ManageObj):
+    '''
+    Класс менеджера отрисовки, выполняющий роль
+    пройслойки между между модулем solar_vis.py и остальной программой.
+    '''
 
-    while manager.run():
+    # События менеджера событий
+
+    REMOVEOBJ = pg.event.custom_type()
+    '''
+    Событие данного типа должно иметь
+    атрибут target, указывающий на объект solar_vis.DrawObj,
+    который нужно удалить
+    '''
+
+    ADDOBJ = pg.event.custom_type()
+    '''
+    Событие данного типа должно иметь
+    атрибут target, указывающий на объект solar_vis.DrawObj,
+    который нужно добавить
+    '''
+
+    def __init__(self, win_size):
+        '''
+        Функция, инициализирующая менеджер отрисовки.
+        :param size: словарь вида {"w", "h"}, размеры окна
+        '''
+
+        super().__init__()
+        self.main_screen = vis.MainScreen(win_size)
+
+    def idle(self):
+        '''
+        Функция, описывающая дефолтное поведение менеджера отрисовки
+        '''
+
+        self.main_screen.update()
+
+    def call(self, event):
+        '''
+        Функция, описывающая реакцию менеджера отрисовки на полученное
+        событие
+        :param event: полученное событие, на которое менеджер отрисовки
+                      должен прореагировать
+        '''
+
+        if event.type == VisualManager.ADDOBJ:
+            self.main_screen.add_obj(event.target)
+
+        elif event.type == VisualManager.REMOVEOBJ:
+            self.main_screen.remove_obj(event.target)
+
+
+def main():
+    event_manager = EventManager()
+    visual_manager = VisualManager(WIN_SIZE)
+
+    visual_manager.set_manager(event_manager)
+
+    while event_manager.run():
         pass
 
 
