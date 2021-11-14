@@ -1,6 +1,6 @@
 import pygame as pg
-import thorpy
 import solar_vis as vis
+import pygame_gui as gui
 
 FPS = 30
 WIN_SIZE = {"w": 1000, "h": 900}
@@ -194,21 +194,21 @@ class VisualManager(ManageObj):
     REMOVEOBJ = pg.event.custom_type()
     '''
     Событие данного типа должно иметь
-    атрибут target, указывающий на объект solar_vis.DrawObj,
+    атрибут target, указывающий на объект,
     который нужно удалить
     '''
 
     ADDOBJ = pg.event.custom_type()
     '''
     Событие данного типа должно иметь
-    атрибут target, указывающий на объект solar_vis.DrawObj,
+    атрибут target, указывающий на объект,
     который нужно добавить
     '''
 
     def __init__(self, win_size):
         '''
         Функция, инициализирующая менеджер отрисовки.
-        :param size: словарь вида {"w", "h"}, размеры окна
+        :param win_size: словарь вида {"w", "h"}, размеры окна
         '''
 
         super().__init__()
@@ -228,7 +228,6 @@ class VisualManager(ManageObj):
         :param event: полученное событие, на которое менеджер отрисовки
                       должен прореагировать
         '''
-
         if event.type == VisualManager.ADDOBJ:
             self.main_screen.add_obj(event.target)
 
@@ -236,14 +235,65 @@ class VisualManager(ManageObj):
             self.main_screen.remove_obj(event.target)
 
 
+class UIManager(ManageObj):
+    '''
+    Класс пользовательского интерфейса
+    '''
+
+    def __init__(self, win_size):
+        '''
+        Функция, инициализирующая менеджер пользовательского
+        интерфейса.
+        :param win_size: словарь вида {"w", "h"}, размеры окна
+        '''
+
+        super().__init__()
+        self.screen = None
+        self.gui_manager = gui.UIManager((win_size["w"], win_size["h"]))
+
+    def call(self, event):
+        '''
+        Функция, описывающая реакцию пользовательский интерфейс на
+        полученное событие
+        :param event: полученное событие, на которое пользовательский
+                      интерфейс должен прореагировать
+        '''
+        self.gui_manager.process_events(event)
+        self.gui_manager.update(1 / FPS)
+
+    def draw(self):
+        '''
+        Функция, отрисовывающая пользовательский интерфейс
+        '''
+        self.gui_manager.draw_ui(self.screen.get_surface())
+
+    def set_screen(self, screen):
+        '''
+        Функция, устанавливающая связь с холстом
+        :param screen: объект solar_vis.Screen, с которым
+                              нужно установить связь
+        '''
+        self.screen = screen
+
+        add_event = pg.event.Event(VisualManager.ADDOBJ,
+                                   {"target": self})
+        pg.event.post(add_event)
+
+
 def main():
     event_manager = EventManager()
     visual_manager = VisualManager(WIN_SIZE)
+    ui_manager = UIManager(WIN_SIZE)
 
     visual_manager.set_manager(event_manager)
+    ui_manager.set_manager(event_manager)
+
+    ui_manager.set_screen(visual_manager.main_screen)
 
     while event_manager.run():
         pass
+
+    pg.quit()
 
 
 if __name__ == "__main__":

@@ -69,7 +69,6 @@ class Screen:
 
         if obj not in self.to_draw_list:
             self.to_draw_list.append(obj)
-            obj.set_screen(self)
 
     def remove_obj(self, obj):
         '''
