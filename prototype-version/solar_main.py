@@ -2,7 +2,7 @@ import pygame as pg
 import thorpy
 
 FPS = 30
-WIN_SIZE = (1000, 900)
+WIN_SIZE = {"w": 1000, "h": 900}
 
 pg.init()
 
