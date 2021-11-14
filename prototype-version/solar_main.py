@@ -54,12 +54,108 @@ class TimeManager(ManageObj):
     Класс менеджера времени
     '''
 
+    # События менеджера времени
+
+    REMOVEOBJ = pg.event.custom_type()
+    '''
+    Событие данного типа должно иметь
+    атрибут target, указывающий на объект,
+    который нужно удалить
+    '''
+
+    ADDOBJ = pg.event.custom_type()
+    '''
+    Событие данного типа должно иметь
+    атрибут target, указывающий на объект,
+    который нужно добавить
+    '''
+
+    class Stopwatch:
+        '''
+        Класс секудомера
+        '''
+
+        def __init__(self, scale=1):
+            '''
+            Функция, иницализирующая секундомер
+            :param scale: скорость течения времени секундомер относительно
+                          реального времени, по умолчанию равна 1
+            '''
+            self.dt = 0
+            self.running = False
+            self.scale = scale
+            self.current_time = 0
+            add_event = pg.event.Event(TimeManager.ADDOBJ, {"target": self})
+            pg.event.post(add_event)
+
+        def update(self, dt):
+            '''
+            Функция, обновляющая значение времени секундомера
+            :param dt: реальное кол-во прошедшего времени
+            '''
+
+            if self.running:
+                self.current_time += self.scale * dt
+                self.dt = self.scale * dt
+
+        def get_time(self):
+            '''
+            Функция, возвращающая кол-во прошедшего времени с момента
+            последнего перезапуска
+            '''
+
+            return self.current_time
+
+        def get_tick(self):
+            '''
+            Функция, возвращающая последнее обновление времени
+            '''
+
+            return self.dt
+
+        def play(self):
+            '''
+            Функция, активирующая секундомер
+            '''
+
+            self.running = True
+
+        def pause(self):
+            '''
+            Функция, приостанавливающая секундомер
+            '''
+
+            self.running = False
+
+        def restart(self, init_time=0):
+            '''
+            Функция перезапускающая секундомер
+            :param init_time: начальное время секундомера, по умолчанию
+                              равно 0
+            '''
+
+            self.current_time = init_time
+
+        def change_flow(self, scale, addjust_time=False):
+            '''
+            Функция, изменяющая скорость течения времени секундомера
+            относительно реального
+            :param scale: новая относительная
+            :param addjsut_time: флаг, показывающий надо ли подстроить
+                                 уже прошедшее время под новое течение
+                                 времени
+            '''
+            if addjust_time:
+                self.current_time *= scale / self.scale
+            self.scale = scale
+
     def __init__(self, fps):
         '''
         Функция инициализирующая менеджера времени
         '''
         self.fps = fps
         self.total_time = 0
+        self.pool = []
         self.clock = pg.time.Clock()
 
         super().__init__()
@@ -69,8 +165,25 @@ class TimeManager(ManageObj):
         Функция, описывающая дефолтное поведение менеджера времени
         (отсчет времени, проверка таймеров и т.д.)
         '''
-        self.clock.tick(self.fps)
-        self.total_time += self.clock.get_time() / 1000
+        dt = self.clock.tick(self.fps) / 1000
+        self.total_time += dt
+
+        for obj in self.pool:
+            obj.update(dt)
+
+    def call(self, event):
+        '''
+        Функция, описывающая реакцию объекта на полученное событие
+        :param event: полученное событие, на которое объект
+                      должен прореагировать
+        '''
+        if event.type == TimeManager.ADDOBJ:
+            if event.target not in self.pool:
+                self.pool.append(event.target)
+
+        elif event.type == TimeManager.REMOVEOBJ:
+            if event.target in self.pool:
+                self.pool.remove(event.target)
 
     def get_time(self):
         '''
@@ -250,6 +363,8 @@ class UIManager(ManageObj):
         super().__init__()
         self.screen = None
         self.gui_manager = gui.UIManager((win_size["w"], win_size["h"]))
+        self.stopwatch = TimeManager.Stopwatch()
+        self.stopwatch.play()
 
     def call(self, event):
         '''
@@ -259,7 +374,7 @@ class UIManager(ManageObj):
                       интерфейс должен прореагировать
         '''
         self.gui_manager.process_events(event)
-        self.gui_manager.update(1 / FPS)
+        self.gui_manager.update(self.stopwatch.get_tick())
 
     def draw(self):
         '''
