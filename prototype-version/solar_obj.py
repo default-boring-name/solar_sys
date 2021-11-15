@@ -3,7 +3,7 @@ import math
 
 
 class Objects:
-    gravitational_constant = 6.67408E-11
+    grav_constant = 6.67408E-11
 
     def __init__(self, x, y, v_x, v_y, color, r, m):
         '''
@@ -40,23 +40,27 @@ class Objects:
                 # проверка слишком близкого сближения
                 if l < (self.r + obj.r):
                     alpha = math.atan2((self.y - obj.y), (self.x - obj.x))
-                    vpself = self.v_y * math.sin(alpha) + self.v_x * math.cos(alpha)
-                    vpobj = obj.v_y * math.sin(alpha) + obj.v_x * math.cos(alpha)
-                    # вычисление составляющей скорости, параллельной линии, соединяющей центры шаров
+                    sin = math.sin(alpha)
+                    cos = math.cos(alpha)
+                    vpself = self.v_y * sin + self.v_x * cos
+                    vpobj = obj.v_y * sin + obj.v_x * cos
+                    # вычисление составляющей скорости, параллельной линии,
+                    # соединяющей центры шаров
                     if vpself * vpobj < 0:
                         # изменение сокоростей при сближении
-                        vparself = -self.v_y * math.cos(alpha) + self.v_x * math.sin(alpha)
-                        vparobj = -obj.v_y * math.cos(alpha) + obj.v_x * math.sin(alpha)
+                        vparself = -self.v_y * cos + self.v_x * sin
+                        vparobj = -obj.v_y * cos + obj.v_x * sin
                         vpself *= -1
                         vpobj *= -1
-                        self.v_x = vparself * math.sin(alpha) + vpself * math.cos(alpha)
-                        self.v_y = - vparself * math.cos(alpha) + vpself * math.sin(alpha)
-                        obj.v_x = vparobj * math.sin(alpha) + vpobj * math.cos(alpha)
-                        obj.v_y = - vparobj * math.cos(alpha) + vpobj * math.sin(alpha)
+                        self.v_x = vparself * sin + vpself * cos
+                        self.v_y = - vparself * cos + vpself * sin
+                        obj.v_x = vparobj * sin + vpobj * cos
+                        obj.v_y = - vparobj * cos + vpobj * sin
 
                 else:
-                    # непосредственное вычисление силы, если объекты не слишком близко
-                    F = Objects.gravitational_constant * self.m * obj.m / l ** 2
+                    # непосредственное вычисление силы,
+                    # если объекты не слишком близко
+                    F = Objects.grav_constant * self.m * obj.m / l ** 2
                     F_x = -F * (self.x - obj.x) / l
                     F_y = -F * (self.y - obj.y) / l
                     self.a_y += F_y / self.m
