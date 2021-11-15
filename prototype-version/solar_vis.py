@@ -173,16 +173,19 @@ class Wrapper(SubScreen):
     класс Обертки модели
     '''
 
-    def __init__(self, model, bg_color=COLORS.TRANSPARENT, scale):
+    def __init__(self, scale, model, pos, size, bg_color=COLORS.TRANSPARENT):
         '''
         инициализация обретки
          model - объект класса Model 
          bg_color=COLORS.TRANSPARENT - цвет фона
          scale - масштаб
+         pos - словарь {x, y} с позицией левого верхнего
+                    угла экрана для отрисовки
+         size - размер экрана для отрисовки
         '''
         self.model = model
         self.scale = scale
-        super.__init__(self, find_pos(self), find_size(self), bg_color)
+        super.__init__(self, pos, size, bg_color)
 
     def draw(self):
         '''
@@ -191,48 +194,6 @@ class Wrapper(SubScreen):
         for mod in self.model:
             pic = Picture(mod)
             pic.draw(self.surf, self.scale)
-
-    def find_size(self):
-        '''
-        поиск размера поверхности по характристикам модели
-        '''
-        size = {}
-        size['w'] = find_max(self)['xmax'] - find_max(self)['xmin']
-        size['h'] = find_max(self)['ymax'] - find_max(self)['ymin']
-        return size
-
-    def find_pos(self):
-        '''
-        поиск положения угла поверхности по характеристикам модели
-        '''
-        pos = {}
-        pos['x'] = find_max(self)['xmin']
-        pos['y'] = find_max(self)['ymin']
-
-    def find_max(self):
-        '''
-        поиск максимальных и минимальных координат
-        '''
-        if self.model:
-            xmax = self.model[0].x
-            xmin = self.model[0].x
-            ymin = self.model[0].y
-            ymax = self.model[0].y
-        for obj in model:
-            if obj.x > xmax:
-                xmax.obj.x
-            if obj.x < xmin:
-                xmin = obj.x
-            if obj.y > ymax:
-                ymax = obj.y
-            if obj.y < ymin:
-                ymin = obj.y
-        max_min = {}
-        max_min['xmin'] = xmin * self.scale
-        max_min['xmax'] = xmax * self.scale
-        max_min['ymin'] = ymin * self.scale
-        max_min['ymax'] = ymax * self.scale
-        return max_min
 
 
 class Picture:
