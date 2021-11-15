@@ -1,0 +1,3 @@
+PyYAML
+pyagme
+pygame_gui==0.5.7 
