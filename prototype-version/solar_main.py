@@ -1,3 +1,4 @@
+# coding:utf-8
 import pygame as pg
 import solar_vis as vis
 import pygame_gui as gui
