@@ -184,10 +184,10 @@ class ModelVisual(SubScreen):
         '''
         self.model = model
         self.scale = scale
-        super.__init__(self, pos, size, bg_color)
+        super().__init__(pos, size, bg_color)
 
         for obj in self.model.get_link():
-            new_sprite = Sprite(obj)
+            new_sprite = Sprite(obj, scale)
             new_sprite.set_screen(self)
             self.add_obj(new_sprite)
 
@@ -214,8 +214,9 @@ class Sprite:
         '''
         x = self.obj.x * self.scale
         y = self.obj.y * self.scale
-        surf = self.screeb.get_surface()
-        pg.draw.circle(surf, self.obj.color, x, y, self.obj.r)
+        surf = self.screen.get_surface()
+        pg.draw.circle(surf, self.obj.color, (int(x), int(y)),
+                       int(self.obj.r))
 
     def set_screen(self, screen):
         '''

@@ -1,10 +1,12 @@
 # coding:utf-8
 import pygame as pg
-import solar_vis as vis
+import solar_vis as s_vis
+import solar_model as s_model
+import solar_input as s_input
 import pygame_gui as gui
 
 FPS = 30
-WIN_SIZE = {"w": 1000, "h": 900}
+WIN_SIZE = {"w": 900, "h": 800}
 
 pg.init()
 
@@ -326,7 +328,7 @@ class VisualManager(ManageObj):
         '''
 
         super().__init__()
-        self.main_screen = vis.MainScreen(win_size)
+        self.main_screen = s_vis.MainScreen(win_size)
 
     def idle(self):
         '''
@@ -396,15 +398,117 @@ class UIManager(ManageObj):
         pg.event.post(add_event)
 
 
+class ModelManager(ManageObj):
+    '''
+    Класс менеджера модели, являющийся прослойкой между
+    solar_model.py и остальной программой
+    '''
+
+    # События менеджера модели
+
+    LOAD = pg.event.custom_type()
+
+    '''
+    Событие данного типа должно иметь
+    атрибут file, содержащий путь к файлу,
+    из которого нужно загрузить модель
+    '''
+
+    CHANGEFLOW = pg.event.custom_type()
+
+    '''
+    Событие данного типа должно иметь
+    атрибут scale - новую скорость течения времени
+    в модели
+    '''
+
+    TOGGLE = pg.event.custom_type()
+
+    '''
+    Событие данного типа должно иметь
+    атрибут mode (boolean value) - режим, в который
+    нужно переключить модель
+    '''
+
+    def __init__(self, win_size):
+        '''
+        Функция инициализирующая менеджер модели
+        :param win_size: словарь вида {"w", "h"}, размеры окна
+        '''
+        self.win_size = dict(win_size)
+        self.model = None
+        self.visual = None
+        self.screen = None
+        self.stopwatch = None
+
+    def call(self, event):
+        '''
+        Функция, описывающая реакцию менеджера модели на
+        полученное событие
+        :param event: полученное событие, на которое пользовательский
+                      интерфейс должен прореагировать
+        '''
+
+        if event.type == ModelManager.LOAD:
+            objects = s_input.read_space_objects_data_from_file(event.file)
+            self.model = s_model.Model()
+            self.model.load(objects)
+
+            self.stopwatch = TimeManager.Stopwatch()
+            self.stopwatch.play()
+
+            max_distance = 2 * self.model.get_max_distance()
+            scale = min(self.win_size.values()) / max_distance
+            pos = {"x": 0, "y": 0}
+
+            self.visual = s_vis.ModelVisual(scale, self.model, pos,
+                                            self.win_size)
+            self.visual.set_screen(self.screen)
+            add_event = pg.event.Event(VisualManager.ADDOBJ,
+                                       {"target": self.visual})
+            pg.event.post(add_event)
+
+        elif event.type == ModelManager.CHANGEFLOW:
+            if self.stopwatch is not None:
+                self.stopwatch.change_flow(event.scale)
+
+        elif event.type == ModelManager.TOGGLE:
+            if self.stopwatch is not None:
+                if event.mode:
+                    self.stopwatch.play()
+                else:
+                    self.stopwatch.pause()
+
+    def idle(self):
+        '''
+        Функция, описывающая дефолтное поведение менеджера модели
+        '''
+
+        if self.stopwatch is not None:
+            if self.stopwatch.running:
+                self.model.update(self.stopwatch.get_tick())
+
+    def set_screen(self, screen):
+        '''
+        Функция, устанавливающая связь с холстом
+        :param screen: объект solar_vis.Screen, с которым
+                              нужно установить связь
+        '''
+        self.screen = screen
+
+
 def main():
     event_manager = EventManager()
     visual_manager = VisualManager(WIN_SIZE)
+    model_manager = ModelManager(WIN_SIZE)
     ui_manager = UIManager(WIN_SIZE)
 
     visual_manager.set_manager(event_manager)
+    model_manager.set_manager(event_manager)
     ui_manager.set_manager(event_manager)
 
     ui_manager.set_screen(visual_manager.main_screen)
+    model_manager.set_screen(visual_manager.main_screen)
 
     while event_manager.run():
         pass

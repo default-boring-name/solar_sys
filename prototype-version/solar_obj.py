@@ -3,14 +3,14 @@ import math
 
 
 class Objects:
-    grav_constant = 6.67408E-11
+    grav_constant = 6.67408e-11
 
     def __init__(self, x, y, v_x, v_y, color, r, m):
         '''
         инициализация класса объектов солнечной системы
         x - координата x
         y - координата y
-        v_x - горизонтальная скорость 
+        v_x - горизонтальная скорость
         v_y - вертикальная скорость
         color - цвет
         r - радиус
@@ -75,4 +75,3 @@ class Objects:
         self.v_y += self.a_y * dt
         self.x += self.v_x * dt
         self.y += self.v_y * dt
-
