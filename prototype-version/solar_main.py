@@ -510,13 +510,13 @@ class ModelManager(ManageObj):
         '''
 
         if event.type == ModelManager.LOAD:
-            objects = s_input.read_space_objects_data_from_file(event.file)
+            data = s_input.read_data_from_file(event.file)
             self.model = s_model.Model()
-            self.model.load(objects)
+            self.model.load(data["Objects"])
 
             self.stopwatch = TimeManager.Stopwatch()
             self.stopwatch.play()
-            self.stopwatch.change_flow(365 * 24 * 60 * 2)
+            self.stopwatch.change_flow(data["Time scale"])
 
             max_distance = 2.1 * self.model.get_max_distance()
             scale = min(self.size.values()) / max_distance

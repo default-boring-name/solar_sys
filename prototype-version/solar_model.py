@@ -1,5 +1,6 @@
 # coding:utf-8
 import copy
+import solar_obj
 
 
 class Model:
@@ -13,12 +14,15 @@ class Model:
         '''
         self.space_objs = []
 
-    def load(self, objects):
+    def load(self, objs_data):
         '''
         Функция, загружающая объекты из переданного массива
         :param objects: массив с объектами, которые будут добавлены в проект
         '''
-        self.space_objs = objects
+        self.space_objs = []
+        for data in objs_data:
+            new_obj = solar_obj.Objects(**data)
+            self.space_objs.append(new_obj)
 
     def update(self, dt):
         '''
