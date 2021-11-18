@@ -372,15 +372,32 @@ class UIManager(ManageObj):
         self.stopwatch = TimeManager.Stopwatch()
         self.stopwatch.play()
 
-        self.ui_pool = dict()
-
         load_button_params = {
                               "relative_rect": pg.Rect(20, 20, 100, 50),
                               "text": "Load model",
                               "manager": self.gui_manager
                              }
         load_button = UIManager.button(**load_button_params)
-        self.ui_pool.update({"load button": load_button})
+
+        pause_button_params = {
+                               "relative_rect": pg.Rect(120, 20, 100, 50),
+                               "text": "Pause",
+                               "manager": self.gui_manager
+                              }
+        pause_button = UIManager.button(**pause_button_params)
+
+        play_button_params = {
+                               "relative_rect": pg.Rect(220, 20, 100, 50),
+                               "text": "Play",
+                               "manager": self.gui_manager
+                              }
+        play_button = UIManager.button(**play_button_params)
+
+        self.ui_pool = {
+                        "load button": load_button,
+                        "pause button": pause_button,
+                        "play button": play_button
+                       }
 
     def call(self, event):
         '''
@@ -403,7 +420,17 @@ class UIManager(ManageObj):
                     file_dialog = UIManager.file_dialog(**win_params)
                     self.ui_pool.update({"file dialog": file_dialog})
 
-            if event.user_type == gui.UI_FILE_DIALOG_PATH_PICKED:
+                elif event.ui_element is self.ui_pool["pause button"]:
+                    pause_event = pg.event.Event(ModelManager.TOGGLE,
+                                                 {"mode": False})
+                    pg.event.post(pause_event)
+
+                elif event.ui_element is self.ui_pool["play button"]:
+                    play_event = pg.event.Event(ModelManager.TOGGLE,
+                                                {"mode": True})
+                    pg.event.post(play_event)
+
+            elif event.user_type == gui.UI_FILE_DIALOG_PATH_PICKED:
                 if "file dialog" in self.ui_pool:
                     if event.ui_element is self.ui_pool["file dialog"]:
                         load_event = pg.event.Event(ModelManager.LOAD,
@@ -462,12 +489,13 @@ class ModelManager(ManageObj):
     нужно переключить модель
     '''
 
-    def __init__(self, win_size):
+    def __init__(self, pos, size):
         '''
         Функция инициализирующая менеджер модели
-        :param win_size: словарь вида {"w", "h"}, размеры окна
+        :param size: словарь вида {"w", "h"}, размеры окна
         '''
-        self.win_size = dict(win_size)
+        self.size = dict(size)
+        self.pos = dict(pos)
         self.model = None
         self.visual = None
         self.screen = None
@@ -490,12 +518,11 @@ class ModelManager(ManageObj):
             self.stopwatch.play()
             self.stopwatch.change_flow(365 * 24 * 60 * 2)
 
-            max_distance = 2 * self.model.get_max_distance()
-            scale = min(self.win_size.values()) / max_distance
-            pos = {"x": 0, "y": 0}
+            max_distance = 2.1 * self.model.get_max_distance()
+            scale = min(self.size.values()) / max_distance
 
-            self.visual = s_vis.ModelVisual(scale, self.model, pos,
-                                            self.win_size)
+            self.visual = s_vis.ModelVisual(scale, self.model,
+                                            self.pos, self.size)
             self.visual.set_screen(self.screen)
             add_event = pg.event.Event(VisualManager.ADDOBJ,
                                        {"target": self.visual})
@@ -533,7 +560,13 @@ class ModelManager(ManageObj):
 def main():
     event_manager = EventManager()
     visual_manager = VisualManager(WIN_SIZE)
-    model_manager = ModelManager(WIN_SIZE)
+
+    model_pos = {"x": WIN_SIZE["w"] * 0.05,
+                 "y": WIN_SIZE["h"] * 0.15}
+    model_size = {"w": WIN_SIZE["w"] * 0.9,
+                  "h": WIN_SIZE["h"] * 0.80}
+
+    model_manager = ModelManager(model_pos, model_size)
     ui_manager = UIManager(WIN_SIZE)
 
     visual_manager.set_manager(event_manager)
