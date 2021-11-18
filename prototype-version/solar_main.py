@@ -356,6 +356,9 @@ class UIManager(ManageObj):
     Класс пользовательского интерфейса
     '''
 
+    button = gui.elements.ui_button.UIButton
+    file_dialog = gui.windows.ui_file_dialog.UIFileDialog
+
     def __init__(self, win_size):
         '''
         Функция, инициализирующая менеджер пользовательского
@@ -369,6 +372,16 @@ class UIManager(ManageObj):
         self.stopwatch = TimeManager.Stopwatch()
         self.stopwatch.play()
 
+        self.ui_pool = dict()
+
+        load_button_params = {
+                              "relative_rect": pg.Rect(20, 20, 100, 50),
+                              "text": "Load model",
+                              "manager": self.gui_manager
+                             }
+        load_button = UIManager.button(**load_button_params)
+        self.ui_pool.update({"load button": load_button})
+
     def call(self, event):
         '''
         Функция, описывающая реакцию пользовательский интерфейс на
@@ -378,6 +391,25 @@ class UIManager(ManageObj):
         '''
         self.gui_manager.process_events(event)
         self.gui_manager.update(self.stopwatch.get_tick())
+
+        if event.type == pg.USEREVENT:
+            if event.user_type == gui.UI_BUTTON_PRESSED:
+                if event.ui_element is self.ui_pool["load button"]:
+                    win_params = {
+                                  "rect": pg.Rect(20, 20, 500, 400),
+                                  "manager": self.gui_manager,
+                                  "window_title": "Choose the model"
+                                 }
+                    file_dialog = UIManager.file_dialog(**win_params)
+                    self.ui_pool.update({"file dialog": file_dialog})
+
+            if event.user_type == gui.UI_FILE_DIALOG_PATH_PICKED:
+                if "file dialog" in self.ui_pool:
+                    if event.ui_element is self.ui_pool["file dialog"]:
+                        load_event = pg.event.Event(ModelManager.LOAD,
+                                                    {"file": event.text})
+                        pg.event.post(load_event)
+                        self.ui_pool.pop("file dialog")
 
     def draw(self):
         '''
@@ -456,6 +488,7 @@ class ModelManager(ManageObj):
 
             self.stopwatch = TimeManager.Stopwatch()
             self.stopwatch.play()
+            self.stopwatch.change_flow(365 * 24 * 60 * 2)
 
             max_distance = 2 * self.model.get_max_distance()
             scale = min(self.win_size.values()) / max_distance
