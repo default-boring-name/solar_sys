@@ -356,8 +356,21 @@ class UIManager(ManageObj):
     Класс пользовательского интерфейса
     '''
 
+    # События менеджера пользовательско интерфейса
+
+    UPDATELABEL = pg.event.custom_type()
+
+    '''
+    Событие данного типа должно иметь
+    атрибут target - название надписи, которую
+    нужно обновить, и атрибут text - новая текст
+    надписи
+    '''
+
     button = gui.elements.ui_button.UIButton
     file_dialog = gui.windows.ui_file_dialog.UIFileDialog
+    horiz_slider = gui.elements.ui_horizontal_slider.UIHorizontalSlider
+    label = gui.elements.ui_label.UILabel
 
     def __init__(self, win_size):
         '''
@@ -371,6 +384,7 @@ class UIManager(ManageObj):
         self.gui_manager = gui.UIManager((win_size["w"], win_size["h"]))
         self.stopwatch = TimeManager.Stopwatch()
         self.stopwatch.play()
+        self.stopwatch.change_flow(0.1)
 
         load_button_params = {
                               "relative_rect": pg.Rect(20, 20, 100, 50),
@@ -393,10 +407,38 @@ class UIManager(ManageObj):
                               }
         play_button = UIManager.button(**play_button_params)
 
+        speed_slider_params = {
+                               "relative_rect": pg.Rect(20, 70, 200, 25),
+                               "manager": self.gui_manager,
+                               "start_value": 0,
+                               "value_range": (-6, 12)
+                              }
+        speed_slider = UIManager.horiz_slider(**speed_slider_params)
+
+        timer_label_params = {
+                              "relative_rect": pg.Rect(0, 20, 200, 50),
+                              "manager": self.gui_manager,
+                              "text": "Model time: 0y 0m",
+                              "anchors": {
+                                          "left": "right",
+                                          "right": "right",
+                                          "top": "top",
+                                          "bottom": "top"
+                                         }
+                             }
+        timer_label_params["relative_rect"].topright = (-20, 20)
+
+        timer_label = UIManager.label(**timer_label_params)
+
         self.ui_pool = {
                         "load button": load_button,
                         "pause button": pause_button,
-                        "play button": play_button
+                        "play button": play_button,
+                        "speed slider": {
+                                         "slider": speed_slider,
+                                         "last value": 0
+                                        },
+                        "timer label": timer_label
                        }
 
     def call(self, event):
@@ -411,32 +453,81 @@ class UIManager(ManageObj):
 
         if event.type == pg.USEREVENT:
             if event.user_type == gui.UI_BUTTON_PRESSED:
-                if event.ui_element is self.ui_pool["load button"]:
-                    win_params = {
-                                  "rect": pg.Rect(20, 20, 500, 400),
-                                  "manager": self.gui_manager,
-                                  "window_title": "Choose the model"
-                                 }
-                    file_dialog = UIManager.file_dialog(**win_params)
-                    self.ui_pool.update({"file dialog": file_dialog})
+                self.button_handling(event)
 
-                elif event.ui_element is self.ui_pool["pause button"]:
-                    pause_event = pg.event.Event(ModelManager.TOGGLE,
-                                                 {"mode": False})
-                    pg.event.post(pause_event)
-
-                elif event.ui_element is self.ui_pool["play button"]:
-                    play_event = pg.event.Event(ModelManager.TOGGLE,
-                                                {"mode": True})
-                    pg.event.post(play_event)
+            elif event.user_type == gui.UI_HORIZONTAL_SLIDER_MOVED:
+                self.slider_handling(event)
 
             elif event.user_type == gui.UI_FILE_DIALOG_PATH_PICKED:
-                if "file dialog" in self.ui_pool:
-                    if event.ui_element is self.ui_pool["file dialog"]:
-                        load_event = pg.event.Event(ModelManager.LOAD,
-                                                    {"file": event.text})
-                        pg.event.post(load_event)
-                        self.ui_pool.pop("file dialog")
+                self.file_dialog_handling(event)
+
+        elif event.type == UIManager.UPDATELABEL:
+            if event.target in self.ui_pool.keys():
+                self.ui_pool[event.target].set_text(event.text)
+
+    def button_handling(self, event):
+        '''
+        Функция, обрабатывающая события, связанные с кнопками
+        :param event: полученное событие, на которое пользовательский
+                      интерфейс должен прореагировать
+        '''
+        if event.user_type == gui.UI_BUTTON_PRESSED:
+            if event.ui_element is self.ui_pool["load button"]:
+                win_params = {
+                              "rect": pg.Rect(20, 20, 500, 400),
+                              "manager": self.gui_manager,
+                              "window_title": "Choose the model"
+                             }
+                file_dialog = UIManager.file_dialog(**win_params)
+                self.ui_pool.update({"file dialog": file_dialog})
+
+            elif event.ui_element is self.ui_pool["pause button"]:
+                pause_event = pg.event.Event(ModelManager.TOGGLE,
+                                             {"mode": False})
+                pg.event.post(pause_event)
+
+            elif event.ui_element is self.ui_pool["play button"]:
+                play_event = pg.event.Event(ModelManager.TOGGLE,
+                                            {"mode": True})
+                pg.event.post(play_event)
+
+    def slider_handling(self, event):
+        '''
+        Функция, обрабатывающая события, связанные со слайдерами
+        :param event: полученное событие, на которое пользовательский
+                      интерфейс должен прореагировать
+        '''
+        if event.user_type == gui.UI_HORIZONTAL_SLIDER_MOVED:
+            if event.ui_element == self.ui_pool["speed slider"]["slider"]:
+                value = event.ui_element.get_current_value()
+
+                if value != self.ui_pool["speed slider"]["last value"]:
+                    self.ui_pool["speed slider"]["last value"] = value
+
+                    scale = 10 ** (value / 10)
+                    scale_event = pg.event.Event(ModelManager.CHANGEFLOW,
+                                                 {"scale": scale})
+                    pg.event.post(scale_event)
+
+    def file_dialog_handling(self, event):
+        '''
+        Функция, обрабатывающая события, связанные со окном выбора файла
+        :param event: полученное событие, на которое пользовательский
+                      интерфейс должен прореагировать
+        '''
+
+        if event.user_type == gui.UI_FILE_DIALOG_PATH_PICKED:
+            if "file dialog" in self.ui_pool:
+                if event.ui_element is self.ui_pool["file dialog"]:
+                    load_event = pg.event.Event(ModelManager.LOAD,
+                                                {"file": event.text})
+                    pg.event.post(load_event)
+                    self.ui_pool.pop("file dialog")
+
+                    self.ui_pool["speed slider"]["slider"].set_current_value(0)
+                    self.ui_pool["speed slider"]["last value"] = 0
+
+                    self.ui_pool["timer label"].set_text("Model time: 0y 0m")
 
     def draw(self):
         '''
@@ -477,8 +568,9 @@ class ModelManager(ManageObj):
 
     '''
     Событие данного типа должно иметь
-    атрибут scale - новую скорость течения времени
-    в модели
+    атрибут scale - новая скорость течения времени
+    в модели относительно дефолтной скорости течения времени в модели
+    (загружается из файла)
     '''
 
     TOGGLE = pg.event.custom_type()
@@ -500,6 +592,7 @@ class ModelManager(ManageObj):
         self.visual = None
         self.screen = None
         self.stopwatch = None
+        self.default_speed = 1
 
     def call(self, event):
         '''
@@ -510,6 +603,11 @@ class ModelManager(ManageObj):
         '''
 
         if event.type == ModelManager.LOAD:
+            if self.model is not None:
+                remove_event = pg.event.Event(VisualManager.REMOVEOBJ,
+                                              {"target": self.visual})
+                pg.event.post(remove_event)
+
             data = s_input.read_data_from_file(event.file)
             self.model = s_model.Model()
             self.model.load(data["Objects"])
@@ -517,9 +615,11 @@ class ModelManager(ManageObj):
             self.stopwatch = TimeManager.Stopwatch()
             self.stopwatch.play()
             self.stopwatch.change_flow(data["Time scale"])
+            self.default_speed = data["Time scale"]
 
             max_distance = 2.1 * self.model.get_max_distance()
             scale = min(self.size.values()) / max_distance
+            print(max_distance)
 
             self.visual = s_vis.ModelVisual(scale, self.model,
                                             self.pos, self.size)
@@ -530,7 +630,7 @@ class ModelManager(ManageObj):
 
         elif event.type == ModelManager.CHANGEFLOW:
             if self.stopwatch is not None:
-                self.stopwatch.change_flow(event.scale)
+                self.stopwatch.change_flow(event.scale * self.default_speed)
 
         elif event.type == ModelManager.TOGGLE:
             if self.stopwatch is not None:
@@ -547,6 +647,16 @@ class ModelManager(ManageObj):
         if self.stopwatch is not None:
             if self.stopwatch.running:
                 self.model.update(self.stopwatch.get_tick())
+
+                time = int(self.stopwatch.get_time())
+                years = time // (365 * 24 * 60 * 60)
+                months = time % (365 * 24 * 60 * 60) // (30 * 24 * 60 * 60)
+
+                time_str = f"Model time: {years}y {months}m"
+                label_update_event = pg.event.Event(UIManager.UPDATELABEL,
+                                                    {"target": "timer label",
+                                                     "text": time_str})
+                pg.event.post(label_update_event)
 
     def set_screen(self, screen):
         '''
