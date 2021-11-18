@@ -1,6 +1,5 @@
 # coding:utf-8
 import pygame as pg
-from solar_obj import Objects
 
 
 class COLORS:
@@ -161,14 +160,14 @@ class SubScreen(Screen):
         '''
         Функция, рисующая подэкран на предустановленном экране
         '''
-        Screen.update(self)
+        super().update()
         pg.draw.rect(self.surf, COLORS.BLACK,
                      self.surf.get_rect(), 2)
         self.screen.get_surface().blit(self.surf,
                                        (self.pos["x"], self.pos["y"]))
 
 
-class Wrapper(SubScreen):
+class ModelVisual(SubScreen):
     '''
     класс Обертки модели
     '''
@@ -176,7 +175,7 @@ class Wrapper(SubScreen):
     def __init__(self, scale, model, pos, size, bg_color=COLORS.TRANSPARENT):
         '''
         инициализация обретки
-         model - объект класса Model 
+         model - объект класса Model
          bg_color=COLORS.TRANSPARENT - цвет фона
          scale - масштаб
          pos - словарь {x, y} с позицией левого верхнего
@@ -187,16 +186,13 @@ class Wrapper(SubScreen):
         self.scale = scale
         super.__init__(self, pos, size, bg_color)
 
-    def draw(self):
-        '''
-        отрисовка модели
-        '''
-        for mod in self.model:
-            pic = Picture(mod)
-            pic.draw(self.surf, self.scale)
+        for obj in self.model.get_link():
+            new_sprite = Sprite(obj)
+            new_sprite.set_screen(self)
+            self.add_obj(new_sprite)
 
 
-class Picture:
+class Sprite:
     '''
     класс изображения объекта
     '''
@@ -209,14 +205,26 @@ class Picture:
         '''
         self.obj = obj
         self.scale = scale
+        self.screen = None
 
-    def draw(self, surf):
+    def draw(self):
         '''
         отрисовка изображения объекта
         surf - поверхность для отрисовки
         '''
-        pg.draw.circle(surf, self.obj.color,
-                       (self.obj.x * scale, self.obj.y * scale), self.obj.r)
+        x = self.obj.x * self.scale
+        y = self.obj.y * self.scale
+        surf = self.screeb.get_surface()
+        pg.draw.circle(surf, self.obj.color, x, y, self.obj.r)
+
+    def set_screen(self, screen):
+        '''
+        Функция, устанавливающая связь с экраном для
+        отрисовки
+        :param screen: объект Screen, с которым
+                              нужно установить связь
+        '''
+        self.screen = screen
 
 
 if __name__ == "__main__":
