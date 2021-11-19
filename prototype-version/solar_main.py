@@ -407,27 +407,55 @@ class UIManager(ManageObj):
                              }
         load_button = UIManager.button(**load_button_params)
 
+        save_button_params = {
+                              "relative_rect": pg.Rect(120, 20, 100, 50),
+                              "text": "Save model",
+                              "manager": self.gui_manager
+                             }
+        save_button = UIManager.button(**save_button_params)
+
         pause_button_params = {
-                               "relative_rect": pg.Rect(120, 20, 100, 50),
+                               "relative_rect": pg.Rect(220, 20, 100, 50),
                                "text": "Pause",
                                "manager": self.gui_manager
                               }
         pause_button = UIManager.button(**pause_button_params)
 
         play_button_params = {
-                               "relative_rect": pg.Rect(220, 20, 100, 50),
+                               "relative_rect": pg.Rect(320, 20, 100, 50),
                                "text": "Play",
                                "manager": self.gui_manager
                               }
         play_button = UIManager.button(**play_button_params)
 
         speed_slider_params = {
-                               "relative_rect": pg.Rect(20, 70, 200, 25),
+                               "relative_rect": pg.Rect(320, 70, 400, 25),
                                "manager": self.gui_manager,
                                "start_value": 0,
-                               "value_range": (-6, 12)
-                              }
+                               "value_range": (-6, 12),
+                               "anchors": {
+                                           "left": "right",
+                                           "right": "right",
+                                           "top": "top",
+                                           "bottom": "top"
+                                          }
+                            }
+        speed_slider_params["relative_rect"].topright = (-20, 70)
         speed_slider = UIManager.horiz_slider(**speed_slider_params)
+
+        speed_label_params = {
+                              "relative_rect": pg.Rect(320, 20, 200, 50),
+                              "manager": self.gui_manager,
+                              "text": "Current speed: 1",
+                              "anchors": {
+                                          "left": "right",
+                                          "right": "right",
+                                          "top": "top",
+                                          "bottom": "top"
+                                         }
+                            }
+        speed_label_params["relative_rect"].topright = (-220, 20)
+        speed_label = UIManager.label(**speed_label_params)
 
         timer_label_params = {
                               "relative_rect": pg.Rect(0, 20, 200, 50),
@@ -441,17 +469,18 @@ class UIManager(ManageObj):
                                          }
                              }
         timer_label_params["relative_rect"].topright = (-20, 20)
-
         timer_label = UIManager.label(**timer_label_params)
 
         self.ui_pool = {
                         "load button": load_button,
+                        "save button": save_button,
                         "pause button": pause_button,
                         "play button": play_button,
                         "speed slider": {
                                          "slider": speed_slider,
                                          "last value": 0
                                         },
+                        "speed label": speed_label,
                         "timer label": timer_label
                        }
 
@@ -490,10 +519,19 @@ class UIManager(ManageObj):
                 win_params = {
                               "rect": pg.Rect(20, 20, 500, 400),
                               "manager": self.gui_manager,
-                              "window_title": "Choose the model"
+                              "window_title": "Choose the file to load"
                              }
                 file_dialog = UIManager.file_dialog(**win_params)
-                self.ui_pool.update({"file dialog": file_dialog})
+                self.ui_pool.update({"file load": file_dialog})
+
+            elif event.ui_element is self.ui_pool["save button"]:
+                win_params = {
+                              "rect": pg.Rect(20, 20, 500, 400),
+                              "manager": self.gui_manager,
+                              "window_title": "Choose the file to save"
+                             }
+                file_dialog = UIManager.file_dialog(**win_params)
+                self.ui_pool.update({"file save": file_dialog})
 
             elif event.ui_element is self.ui_pool["pause button"]:
                 pause_event = pg.event.Event(ModelManager.TOGGLE,
@@ -519,6 +557,10 @@ class UIManager(ManageObj):
                     self.ui_pool["speed slider"]["last value"] = value
 
                     scale = 10 ** (value / 10)
+
+                    speed_text = f"Current speed: {scale:.4f}"
+                    self.ui_pool["speed label"].set_text(speed_text)
+
                     scale_event = pg.event.Event(ModelManager.CHANGEFLOW,
                                                  {"scale": scale})
                     pg.event.post(scale_event)
@@ -531,17 +573,25 @@ class UIManager(ManageObj):
         '''
 
         if event.user_type == gui.UI_FILE_DIALOG_PATH_PICKED:
-            if "file dialog" in self.ui_pool:
-                if event.ui_element is self.ui_pool["file dialog"]:
+            if "file load" in self.ui_pool:
+                if event.ui_element is self.ui_pool["file load"]:
                     load_event = pg.event.Event(ModelManager.LOAD,
                                                 {"file": event.text})
                     pg.event.post(load_event)
-                    self.ui_pool.pop("file dialog")
+                    self.ui_pool.pop("file load")
 
                     self.ui_pool["speed slider"]["slider"].set_current_value(0)
                     self.ui_pool["speed slider"]["last value"] = 0
 
                     self.ui_pool["timer label"].set_text("Model time: 0y 0m")
+                    self.ui_pool["speed label"].set_text("Current speed: 1")
+
+            if "file save" in self.ui_pool:
+                if event.ui_element is self.ui_pool["file save"]:
+                    load_event = pg.event.Event(ModelManager.SAVE,
+                                                {"file": event.text})
+                    pg.event.post(load_event)
+                    self.ui_pool.pop("file save")
 
     def draw(self):
         '''
@@ -580,6 +630,14 @@ class ModelManager(ManageObj):
     Событие данного типа должно иметь
     атрибут file, содержащий путь к файлу,
     из которого нужно загрузить модель
+    '''
+
+    SAVE = pg.event.custom_type()
+
+    '''
+    Событие данного типа должно иметь
+    атрибут file, содержащий путь к файлу,
+    в который нужно сохранить модель
     '''
 
     CHANGEFLOW = pg.event.custom_type()
@@ -644,6 +702,14 @@ class ModelManager(ManageObj):
             add_event = pg.event.Event(VisualManager.ADDOBJ,
                                        {"target": self.visual})
             pg.event.post(add_event)
+
+        elif event.type == ModelManager.SAVE:
+            if self.model is not None:
+                data = {
+                        "Time scale": self.default_speed,
+                        "Objects": self.model.dump()
+                       }
+                s_input.write_data_to_file(event.file, data)
 
         elif event.type == ModelManager.CHANGEFLOW:
             if self.stopwatch is not None:

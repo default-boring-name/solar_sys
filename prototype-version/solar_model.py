@@ -1,5 +1,4 @@
 # coding:utf-8
-import copy
 import solar_obj
 
 
@@ -48,7 +47,20 @@ class Model:
         Функция, возвращающая последнее состояние модели
         '''
 
-        return copy.deepcopy(self.space_objs)
+        dump_data = []
+        for obj in self.space_objs:
+            obj_data = {
+                        "x": obj.x,
+                        "y": obj.y,
+                        "v_x": obj.v_x,
+                        "v_y": obj.v_y,
+                        "color": obj.color,
+                        "r": obj.r,
+                        "m": obj.m,
+                       }
+            dump_data.append(obj_data)
+
+        return dump_data
 
     def get_max_distance(self):
         '''

@@ -18,16 +18,14 @@ def read_data_from_file(input_filename):
     return data
 
 
-def write_data_to_file(output_filename, objects):
+def write_data_to_file(output_filename, data):
     """Сохраняет данные о космических объектах в файл
     Параметры:
 
     **output_filename** — имя выходного файла
 
-    **objects** — список объектов планет и звёзд
+    **data** — данные, которые нужно записать
     """
-    array = [vars(obj) for obj in objects]
-    data = {'objects': array}
     with open(output_filename, 'w') as out_file:
         yaml.dump(data, out_file)
 
