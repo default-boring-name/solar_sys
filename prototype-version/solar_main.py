@@ -321,6 +321,13 @@ class VisualManager(ManageObj):
     который нужно добавить
     '''
 
+    SETUI = pg.event.custom_type()
+    '''
+    События данного типа должно иметь
+    атрибут ui, указывающий на объект UIManager,
+    который нужно установить
+    '''
+
     def __init__(self, win_size):
         '''
         Функция, инициализирующая менеджер отрисовки.
@@ -328,6 +335,7 @@ class VisualManager(ManageObj):
         '''
 
         super().__init__()
+        self.ui = None
         self.main_screen = s_vis.MainScreen(win_size)
 
     def idle(self):
@@ -346,9 +354,15 @@ class VisualManager(ManageObj):
         '''
         if event.type == VisualManager.ADDOBJ:
             self.main_screen.add_obj(event.target)
+            if event.target is not self.ui and self.ui is not None:
+                self.main_screen.remove_obj(self.ui)
+                self.main_screen.add_obj(self.ui)
 
         elif event.type == VisualManager.REMOVEOBJ:
             self.main_screen.remove_obj(event.target)
+
+        elif event.type == VisualManager.SETUI:
+            self.ui = event.ui
 
 
 class UIManager(ManageObj):
@@ -547,6 +561,10 @@ class UIManager(ManageObj):
                                    {"target": self})
         pg.event.post(add_event)
 
+        add_ui_event = pg.event.Event(VisualManager.SETUI,
+                                      {"ui": self})
+        pg.event.post(add_ui_event)
+
 
 class ModelManager(ManageObj):
     '''
@@ -598,8 +616,8 @@ class ModelManager(ManageObj):
         '''
         Функция, описывающая реакцию менеджера модели на
         полученное событие
-        :param event: полученное событие, на которое пользовательский
-                      интерфейс должен прореагировать
+        :param event: полученное событие, на которое менеджер модели
+                      должен прореагировать
         '''
 
         if event.type == ModelManager.LOAD:
@@ -619,7 +637,6 @@ class ModelManager(ManageObj):
 
             max_distance = 2.1 * self.model.get_max_distance()
             scale = min(self.size.values()) / max_distance
-            print(max_distance)
 
             self.visual = s_vis.ModelVisual(scale, self.model,
                                             self.pos, self.size)
@@ -638,6 +655,39 @@ class ModelManager(ManageObj):
                     self.stopwatch.play()
                 else:
                     self.stopwatch.pause()
+
+        elif event.type == pg.KEYDOWN:
+            self.key_handling(event)
+
+    def key_handling(self, event):
+        '''
+        Функция, обрабатывающая события, связанные с нажатием клавиш
+        :param event: полученное событие, на которое менеджер модели
+                      должен прореагировать
+        '''
+
+        if event.type == pg.KEYDOWN:
+            if self.visual is not None:
+                if event.key == pg.K_w:
+                    self.visual.move_camera({"x": 0, "y": -10})
+
+                elif event.key == pg.K_s:
+                    self.visual.move_camera({"x": 0, "y": 10})
+
+                elif event.key == pg.K_a:
+                    self.visual.move_camera({"x": -10, "y": 0})
+
+                elif event.key == pg.K_d:
+                    self.visual.move_camera({"x": 10, "y": 0})
+
+                elif event.key == pg.K_q:
+                    self.visual.zoom_camera(10)
+
+                elif event.key == pg.K_e:
+                    self.visual.zoom_camera(-10)
+
+                elif event.key == pg.K_r:
+                    self.visual.default_camera()
 
     def idle(self):
         '''

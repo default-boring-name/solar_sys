@@ -172,11 +172,11 @@ class ModelVisual(SubScreen):
     класс Обертки модели
     '''
 
-    def __init__(self, scale, model, pos, size, bg_color=COLORS.TRANSPARENT):
+    def __init__(self, scale, model, pos, size, bg_color=COLORS.BLACK):
         '''
         инициализация обретки
          model - объект класса Model
-         bg_color=COLORS.TRANSPARENT - цвет фона
+         bg_color=COLORS.BLACK - цвет фона
          scale - масштаб
          pos - словарь {x, y} с позицией левого верхнего
                     угла экрана для отрисовки
@@ -184,12 +184,51 @@ class ModelVisual(SubScreen):
         '''
         self.model = model
         self.scale = scale
+        self.offset = {"x": 0, "y": 0}
+        self.zoom = 0
         super().__init__(pos, size, bg_color)
 
         for obj in self.model.get_link():
             new_sprite = Sprite(obj, scale)
             new_sprite.set_screen(self)
             self.add_obj(new_sprite)
+
+    def move_camera(self, offset):
+        '''
+        Функция, смещающие камеру на указанные координаты
+        :param offset: словарь {x, y} с координатами смещения
+                       камеры
+        '''
+
+        self.offset = {
+                       "x": self.offset["x"] + offset["x"],
+                       "y": self.offset["y"] + offset["y"]
+                      }
+        for sprite in self.to_draw_list:
+            sprite.add_offset(-self.offset["x"], -self.offset["y"])
+
+    def zoom_camera(self, zoom):
+        '''
+        Функция, приближающая камеру на указанное кол-во процентов
+        :param zoom: кол-во процентов, которое приблизится камера
+                     (например, если zoom = 10, то все рассояния
+                      увеличатся в 1.1 раз)
+        '''
+
+        self.zoom += zoom
+        for sprite in self.to_draw_list:
+            sprite.set_scale(self.scale * (1 + self.zoom / 100))
+
+    def default_camera(self):
+        '''
+        Функция, возвращающая камеру в дефолтное состояние
+        '''
+
+        self.zoom = 0
+        self.offset = {"x": 0, "y": 0}
+        for sprite in self.to_draw_list:
+            sprite.add_offset(-self.offset["x"], -self.offset["y"])
+            sprite.set_scale(self.scale * (1 + self.zoom / 100))
 
 
 class Sprite:
@@ -206,14 +245,16 @@ class Sprite:
         self.obj = obj
         self.scale = scale
         self.screen = None
+        self.offset_x = 0
+        self.offset_y = 0
 
     def draw(self):
         '''
         отрисовка изображения объекта
         surf - поверхность для отрисовки
         '''
-        x = self.obj.x * self.scale
-        y = self.obj.y * self.scale
+        x = self.obj.x * self.scale + self.offset_x
+        y = self.obj.y * self.scale + self.offset_y
         surf = self.screen.get_surface()
         pg.draw.circle(surf, self.obj.color, (int(x), int(y)),
                        int(self.obj.r))
@@ -226,6 +267,22 @@ class Sprite:
                               нужно установить связь
         '''
         self.screen = screen
+
+    def add_offset(self, offset_x, offset_y):
+        '''
+        Функция, смещающая спрайт на указанные координаты
+        :param offset_x: горизонтальная координата смещения спрайта
+        :param offset_y: вертикальная координата смещения спрайта
+        '''
+        self.offset_x = offset_x
+        self.offset_y = offset_y
+
+    def set_scale(self, scale):
+        '''
+        Функция, устанавливающая новый маштаб
+        :param scale: новый маштаб изображения
+        '''
+        self.scale = scale
 
 
 if __name__ == "__main__":
