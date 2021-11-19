@@ -1,9 +1,16 @@
 # coding:utf-8
 import pygame as pg
-import solar_vis as s_vis
-import solar_model as s_model
-import solar_input as s_input
 import pygame_gui as gui
+import sys
+
+sys.path.append("../visual")
+import solar_vis as s_vis
+
+sys.path.append("../model")
+import solar_model as s_model
+
+sys.path.append("../input")
+import solar_input as s_input
 
 FPS = 30
 WIN_SIZE = {"w": 900, "h": 800}
@@ -519,7 +526,8 @@ class UIManager(ManageObj):
                 win_params = {
                               "rect": pg.Rect(20, 20, 500, 400),
                               "manager": self.gui_manager,
-                              "window_title": "Choose the file to load"
+                              "window_title": "Choose the file to load",
+                              "initial_file_path": "../models-data"
                              }
                 file_dialog = UIManager.file_dialog(**win_params)
                 self.ui_pool.update({"file load": file_dialog})
@@ -528,7 +536,8 @@ class UIManager(ManageObj):
                 win_params = {
                               "rect": pg.Rect(20, 20, 500, 400),
                               "manager": self.gui_manager,
-                              "window_title": "Choose the file to save"
+                              "window_title": "Choose the file to save",
+                              "initial_file_path": "../models-data"
                              }
                 file_dialog = UIManager.file_dialog(**win_params)
                 self.ui_pool.update({"file save": file_dialog})
